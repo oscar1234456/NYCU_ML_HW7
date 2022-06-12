@@ -2,7 +2,7 @@ import numpy as np
 
 
 def eigen_solver(target, k=-99):
-    eigen_vectors, eigen_values = np.linalg.eig(target)
+    eigen_values, eigen_vectors = np.linalg.eig(target)
     keep_eigen_vectors, keep_eigen_values = eigen_vectors, eigen_values
 
     # let eigen value sorted from big to small

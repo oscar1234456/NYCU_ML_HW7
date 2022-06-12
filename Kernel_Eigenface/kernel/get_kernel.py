@@ -7,6 +7,7 @@ def get_kernel(X, kernel_option):
     if kernel_option == "no":
         # return covariance matrix
         S = np.cov(X, bias=True)
+        # S = S/135
         return S
     elif kernel_option == "linear":
         K = X @ X.T

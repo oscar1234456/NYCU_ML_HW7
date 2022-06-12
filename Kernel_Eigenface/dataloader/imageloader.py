@@ -11,7 +11,7 @@ def load_image(path):
     labels = list()
     image_pixel = list()
     for pic_filename in pic_filenames:
-        print(f"pic filename: {pic_filename}")
+        # print(f"pic filename: {pic_filename}")
         label = int(pic_filename.split(".")[0][7:])
         labels.append(label)
         image = Image.open(path + "/" + pic_filename).resize((195, 231))
