@@ -8,7 +8,7 @@ from Kernel_Eigenface.dimReduction.pca import pca
 # Config
 only_pca = True
 kernel_options = ["no", "linear", "polynomial", "RBF"]
-# kernel_options = ["RBF"]
+# kernel_options = ["no"]
 
 # load image
 # training_data: (135, 42045), training_label: (135,)
@@ -20,7 +20,7 @@ for kernel_option in kernel_options:
     # call PCA -> return the data points representation
     #             with low dim and transform matrix
     print("==============")
-    print(f"kernel:{kernel_option}")
+    # print(f"kernel:{kernel_option}")
     pca_z, pca_project_matrix = pca(training_data, kernel_option=kernel_option,
                                     k=-99,
                                     normalization=True,

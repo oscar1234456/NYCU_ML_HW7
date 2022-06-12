@@ -11,9 +11,12 @@
 #
 #  Created by Laurens van der Maaten on 20-12-08.
 #  Copyright (c) 2008 Tilburg University. All rights reserved.
+import os
 
 import numpy as np
 import pylab
+from PIL import Image
+from scipy.spatial.distance import cdist
 
 
 def Hbeta(D=np.array([]), beta=1.0):
@@ -41,6 +44,7 @@ def x2p(X=np.array([]), tol=1e-5, perplexity=30.0):
     (n, d) = X.shape
     sum_X = np.sum(np.square(X), 1)
     D = np.add(np.add(-2 * np.dot(X, X.T), sum_X).T, sum_X)
+    # D is same as a = cdist(X, X, metric='sqeuclidean')
     P = np.zeros((n, n))
     beta = np.ones((n, 1))
     logU = np.log(perplexity)
@@ -55,7 +59,7 @@ def x2p(X=np.array([]), tol=1e-5, perplexity=30.0):
         # Compute the Gaussian kernel and entropy for the current precision
         betamin = -np.inf
         betamax = np.inf
-        Di = D[i, np.concatenate((np.r_[0:i], np.r_[i+1:n]))]
+        Di = D[i, np.concatenate((np.r_[0:i], np.r_[i + 1:n]))]
         (H, thisP) = Hbeta(Di, beta[i])
 
         # Evaluate whether the perplexity is within tolerance
@@ -83,7 +87,7 @@ def x2p(X=np.array([]), tol=1e-5, perplexity=30.0):
             tries += 1
 
         # Set the final row of P
-        P[i, np.concatenate((np.r_[0:i], np.r_[i+1:n]))] = thisP
+        P[i, np.concatenate((np.r_[0:i], np.r_[i + 1:n]))] = thisP
 
     # Return final P-matrix
     print("Mean value of sigma: %f" % np.mean(np.sqrt(1 / beta)))
@@ -104,7 +108,7 @@ def pca(X=np.array([]), no_dims=50):
     return Y
 
 
-def tsne(X=np.array([]), no_dims=2, initial_dims=50, perplexity=30.0):
+def tsne(X=np.array([]), no_dims=2, initial_dims=50, perplexity=30.0, labels=None, symmetric=False):
     """
         Runs t-SNE on the dataset in the NxD array X to reduce its
         dimensionality to no_dims dimensions. The syntaxis of the function is
@@ -120,7 +124,7 @@ def tsne(X=np.array([]), no_dims=2, initial_dims=50, perplexity=30.0):
         return -1
 
     # Initialize variables
-    X = pca(X, initial_dims).real
+    X = pca(X, initial_dims).real  # pca dim 784 reduction to 50
     (n, d) = X.shape
     max_iter = 1000
     initial_momentum = 0.5
@@ -136,7 +140,7 @@ def tsne(X=np.array([]), no_dims=2, initial_dims=50, perplexity=30.0):
     P = x2p(X, 1e-5, perplexity)
     P = P + np.transpose(P)
     P = P / np.sum(P)
-    P = P * 4.									# early exaggeration
+    P = P * 4.  # early exaggeration
     P = np.maximum(P, 1e-12)
 
     # Run iterations
@@ -145,15 +149,27 @@ def tsne(X=np.array([]), no_dims=2, initial_dims=50, perplexity=30.0):
         # Compute pairwise affinities
         sum_Y = np.sum(np.square(Y), 1)
         num = -2. * np.dot(Y, Y.T)
-        num = 1. / (1. + np.add(np.add(num, sum_Y).T, sum_Y))
-        num[range(n), range(n)] = 0.
+        if symmetric:
+            # ssne
+            num = np.exp(-1 * np.add(np.add(num, sum_Y).T, sum_Y))
+        else:
+            # tsne
+            num = 1. / (1. + np.add(np.add(num, sum_Y).T, sum_Y))  # inverse= 倒數
+        # np.add(np.add(num, sum_Y).T, sum_Y) same as cdist(Y,Y, "sqeuclidean")
+        num[range(n), range(n)] = 0.  # 對角線設為0
         Q = num / np.sum(num)
         Q = np.maximum(Q, 1e-12)
 
         # Compute gradient
         PQ = P - Q
-        for i in range(n):
-            dY[i, :] = np.sum(np.tile(PQ[:, i] * num[:, i], (no_dims, 1)).T * (Y[i, :] - Y), 0)
+        if symmetric:
+            # ssne
+            for i in range(n):
+                dY[i, :] = np.sum(np.tile(PQ[:, i], (no_dims, 1)).T * (Y[i, :] - Y), 0)
+        else:
+            # tsne
+            for i in range(n):
+                dY[i, :] = np.sum(np.tile(PQ[:, i] * num[:, i], (no_dims, 1)).T * (Y[i, :] - Y), 0)
 
         # Perform the update
         if iter < 20:
@@ -171,20 +187,76 @@ def tsne(X=np.array([]), no_dims=2, initial_dims=50, perplexity=30.0):
         if (iter + 1) % 10 == 0:
             C = np.sum(P * np.log(P / Q))
             print("Iteration %d: error is %f" % (iter + 1, C))
+            # save pic
+            if symmetric:
+                # symmetric sne
+                show_pic(Y, labels, [-10, 10], iter + 1, save=True, target_dir=f"./ssne/ssne_{int(perplexity)}")
+            else:
+                show_pic(Y, labels, [-120, 120], iter + 1, save=True, target_dir=f"./tsne/tsne_{int(perplexity)}")
 
         # Stop lying about P-values
         if iter == 100:
             P = P / 4.
 
+    show_similarity_dist(P, Q, symmetric, perplexity, save=True)
     # Return solution
     return Y
 
 
+def show_pic(Y, labels, lim, iter, save=True, target_dir=None):
+    pylab.clf()
+    pylab.xlim(lim)
+    pylab.ylim(lim)
+    pylab.scatter(Y[:, 0], Y[:, 1], 20, labels)
+    pylab.title(target_dir[2:6] + f" (perplexity:{target_dir[12:14]} / Iter:{iter})")
+    if save:
+        pylab.savefig(target_dir + f"/{iter}.png")
+    # pylab.show()
+
+
+def convert_GIF(path):
+    images = list()
+    # path: ./tsne/tsne_10
+    pic_filenames = os.listdir(path)
+    pic_filenames.sort(key=lambda x: int(x[:-4]))
+    for pic_filename in pic_filenames:
+        images.append(Image.open(path + "/" + pic_filename))
+    if len(images) == 0:
+        print("There are not any pics in this folder!")
+        return
+    images[0].save(f'{path[:7]}/{path[7:]}.gif',
+                   save_all=True, append_images=images[1:], optimize=False, duration=100, loop=0)
+    print("convert GIF done!")
+
+
+def show_similarity_dist(P, Q, symmetric, perplexity, save=True):
+    method = "ssne" if symmetric else "tsne"
+    pylab.subplot(2, 1, 1)
+    pylab.title(f"{method} High-dimensional space (P)", fontsize=7)
+    pylab.hist(P.flatten(), bins=35, log=True)  # P:(2500,2500)
+    pylab.subplot(2, 1, 2)
+    pylab.title(f"{method} Low-dimensional space (Q)", fontsize=7)
+    pylab.hist(Q.flatten(), bins=35, log=True)  # Q:(2500,2500)
+    if save:
+        pylab.savefig(f"./{method}/similarity_dist_{int(perplexity)}.png")
+    # pylab.show()
+
+
 if __name__ == "__main__":
+    # try:
+    #     os.mkdir("./tsne")
+    #     os.mkdir("./ssne")
+    #     for perplexity in ["10", "20", "30", "40", "50"]:
+    #         os.mkdir("./tsne_" + perplexity)
+    #         os.mkdir("./ssne_" + perplexity)
+    # except OSError:
+    #     print("dir already exist")
     print("Run Y = tsne.tsne(X, no_dims, perplexity) to perform t-SNE on your dataset.")
     print("Running example on 2,500 MNIST digits...")
     X = np.loadtxt("mnist2500_X.txt")
     labels = np.loadtxt("mnist2500_labels.txt")
-    Y = tsne(X, 2, 50, 20.0)
-    pylab.scatter(Y[:, 0], Y[:, 1], 20, labels)
-    pylab.show()
+    for symmetric in [True, False]:
+        word = "ssne" if symmetric else "tsne"
+        for perplexity in [10.0, 20.0, 30.0, 40.0, 50.0]:
+            Y = tsne(X, 2, 50, perplexity, labels, symmetric=symmetric)
+            convert_GIF(f"./{word}/{word}_{int(perplexity)}")

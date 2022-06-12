@@ -25,9 +25,11 @@ def classification(training_z, training_labels, testing_data, testing_labels, pr
         predict_label = sort_result[np.argmax(sort_count)]
         # print([predict_label])
         if predict_label == testing_labels[i]:
+
             hit += 1
 
     # count hit rates
+    print(f"hit:{hit}")
     hit_rates = hit / testing_z.shape[1]
 
     return hit_rates
