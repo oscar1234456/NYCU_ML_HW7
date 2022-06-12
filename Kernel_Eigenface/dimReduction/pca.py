@@ -10,7 +10,8 @@ from Kernel_Eigenface.plot.reconstruction import plot_reconstruction
 def pca(training_data, kernel_option="no",
         k=-99,
         normalization=True,
-        show_eigenface_num=25):
+        show_eigenface_num=25,
+        kernel_name="no"):
     # count mean (mean face)
     mean_face = np.mean(training_data, axis=0)  # (135,)
 
@@ -30,7 +31,7 @@ def pca(training_data, kernel_option="no",
                                         normalization=normalization)
 
     # print eigenface based on project matrix
-    plot_eigenface(project_matrix, show_num=show_eigenface_num)
+    plot_eigenface(project_matrix, show_num=show_eigenface_num, name="EigenFace" + f" (kernel:{kernel_name})")
 
     # count z (low dim representation) (k, 42045) @ (42045, 135) = (k, 135)
     z = get_pca_z(project_matrix, centralized_training_data)
@@ -40,7 +41,8 @@ def pca(training_data, kernel_option="no",
                                                   mean_face, add_mean=True)
 
     # plot reconstruction
-    plot_reconstruction(training_data, training_data_reconstruction, show_num=10)
+    plot_reconstruction(training_data, training_data_reconstruction, show_num=10,
+                        name="PCA Reconstruction" + f" (kernel:{kernel_name})")
 
     return z, project_matrix
 
@@ -61,6 +63,6 @@ def get_pca_z(project_matrix, data):
     return project_matrix.T @ data.T
 
 
-def reconstruction(projection_matrix, z, mean_face, add_mean=True):
+def reconstruction(project_matrix, z, mean_face, add_mean=True):
     # mean_face: (135,)
-    return projection_matrix @ z + mean_face.reshape(-1, 1) if add_mean else projection_matrix @ z
+    return project_matrix @ z + mean_face.reshape(-1, 1) if add_mean else project_matrix @ z

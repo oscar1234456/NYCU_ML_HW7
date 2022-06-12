@@ -23,7 +23,7 @@ def classification(training_z, training_labels, testing_data, testing_labels, pr
         select_range = training_labels[np.argsort(distance_record)][:k]
         sort_result, sort_count = np.unique(select_range, return_counts=True)
         predict_label = sort_result[np.argmax(sort_count)]
-
+        # print([predict_label])
         if predict_label == testing_labels[i]:
             hit += 1
 
