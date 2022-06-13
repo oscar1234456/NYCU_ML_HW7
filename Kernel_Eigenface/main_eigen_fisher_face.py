@@ -7,10 +7,9 @@ from Kernel_Eigenface.dimReduction.pca import pca
 
 # Config
 only_pca = True
-kernel_options = ["no", "linear", "polynomial", "RBF"]
-# kernel_options = ["no"]
-
-# load image
+# kernel_options = ["no", "linear", "polynomial", "RBF"]
+kernel_options = ["RBF"]
+# load imageRBFRBF
 # training_data: (135, 42045), training_label: (135,)
 # testing_data: (30, 42045), testing_label: (30,)
 training_data, training_labels = load_image("./Yale_Face_Database/Training")

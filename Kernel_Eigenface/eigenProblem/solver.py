@@ -20,7 +20,7 @@ def eigen_solver(target, k=-99):
         # pick needed k
         if len(keep_eigen_values) >= k:
             print("select top k eigenVectors")
-            keep_eigen_vectors = keep_eigen_vectors[:k + 1]
+            keep_eigen_vectors = keep_eigen_vectors[:, :k + 1]
             keep_eigen_values = keep_eigen_values[:k + 1]
         else:
             print(f"Your k is too big. There are only "

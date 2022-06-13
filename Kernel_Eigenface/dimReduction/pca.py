@@ -1,4 +1,5 @@
 import numpy as np
+from matplotlib import pyplot as plt
 
 from Kernel_Eigenface.classifier.classification import classification
 from Kernel_Eigenface.eigenProblem.solver import eigen_solver
